@@ -4,6 +4,7 @@ import "hardhat/console.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "./NFTMarketplaceReward.sol";
 
 contract NFTMarketplace is ERC721URIStorage {
 
@@ -13,9 +14,11 @@ contract NFTMarketplace is ERC721URIStorage {
 
     Counters.Counter private _itemsSold;
 
+    NFTMarketplaceReward public marketplaceReward;
+
     address payable owner;
 
-    uint256 listPrice = 0.01 ether;
+    uint256 listPrice = 0.05 ether;
 
     struct ListedToken {
         uint256 tokenId;
@@ -39,15 +42,31 @@ contract NFTMarketplace is ERC721URIStorage {
 
     constructor() ERC721("NFTMarketplace", "NFTM") {
         owner = payable(msg.sender);
+        uint256 ceva = 3;
+        marketplaceReward = new NFTMarketplaceReward();
     }
 
-    function updateListPrice(uint256 _listPrice) public payable {
-        require(owner == msg.sender, "Only owner can update listing price");
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only the owner can call this function");
+        _;
+    }
+
+
+    function updateListPrice(uint256 _listPrice) onlyOwner public payable {
         listPrice = _listPrice;
     }
 
-    function getListPrice() public view returns (uint256) {
-        return listPrice;
+    function getListPrice() external returns (uint256) {
+        //marketplaceReward.increaseSellerNFTCount(msg.sender);
+        bool reward = true;//marketplaceReward.checkReward(msg.sender);
+        uint256 rewardPrice = 0.01 ether;
+        if (reward)
+        {
+            return rewardPrice;
+        } else
+        {
+            return listPrice;
+        }
     }
 
     function getLatestIdToListedToken() public view returns (ListedToken memory) {
@@ -66,6 +85,16 @@ contract NFTMarketplace is ERC721URIStorage {
 
     function createToken(string memory tokenURI, uint256 price) public payable returns (uint) {
 
+        bool reward = marketplaceReward.checkReward(msg.sender);
+
+        if (!reward)
+        {
+            require(msg.value == listPrice, "Hopefully sending the correct price");
+        }
+
+        //require(msg.value == listPrice, "Hopefully sending the correct price");
+        require(price > 0, "Make sure the price isn't negative");
+
         _tokenIds.increment();
         uint256 newTokenId = _tokenIds.current();
 
@@ -80,8 +109,7 @@ contract NFTMarketplace is ERC721URIStorage {
 
     function createListedToken(uint256 tokenId, uint256 price) private {
 
-        require(msg.value == listPrice, "Hopefully sending the correct price");
-        require(price > 0, "Make sure the price isn't negative");
+
 
         idToListedToken[tokenId] = ListedToken(
             tokenId,
@@ -114,30 +142,6 @@ contract NFTMarketplace is ERC721URIStorage {
             currentIndex += 1;
         }
         return tokens;
-    }
-
-    function getSoldNFTsForAddress(address _address) public view returns (ListedToken[] memory) {
-        uint totalItemCount = _tokenIds.current();
-        uint itemCount = 0;
-        uint currentIndex = 0;
-        uint currentId;
-        for(uint i=0; i < totalItemCount; i++)
-        {
-            if(idToListedToken[i+1].owner == _address && !idToListedToken[i+1].currentlyListed){
-                itemCount += 1;
-            }
-        }
-
-        ListedToken[] memory items = new ListedToken[](itemCount);
-        for(uint i=0; i < totalItemCount; i++) {
-            if(idToListedToken[i+1].owner == _address && !idToListedToken[i+1].currentlyListed) {
-                currentId = i+1;
-                ListedToken storage currentItem = idToListedToken[currentId];
-                items[currentIndex] = currentItem;
-                currentIndex += 1;
-            }
-        }
-        return items;
     }
     
     function getMyNFTs() public view returns (ListedToken[] memory) {
@@ -176,8 +180,17 @@ contract NFTMarketplace is ERC721URIStorage {
         _transfer(address(this), msg.sender, tokenId);
         approve(address(this), tokenId);
 
+
+
         payable(owner).transfer(listPrice);
         payable(seller).transfer(msg.value);
+
+       
+
+    }
+
+    function addNumber(uint256 a, uint256 b) public pure returns (uint256) {
+        return a + b;
     }
 
 }

@@ -17,6 +17,21 @@ async function main() {
 
   //This writes the ABI and address to the mktplace.json
   fs.writeFileSync('./src/Marketplace.json', JSON.stringify(data))
+
+  const Reward = await hre.ethers.getContractFactory("NFTMarketplaceReward");
+  const reward = await Reward.deploy();
+
+  await reward.deployed();
+
+  const data2 = {
+    address: reward.address,
+    abi: JSON.parse(reward.interface.format('json'))
+  }
+
+  //This writes the ABI and address to the reward.json
+  fs.writeFileSync('./src/Reward.json', JSON.stringify(data2))
+
+
 }
 
 main()
