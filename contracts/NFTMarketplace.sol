@@ -1,3 +1,5 @@
+//SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
@@ -42,7 +44,7 @@ contract NFTMarketplace is ERC721URIStorage {
 
     constructor() ERC721("NFTMarketplace", "NFTM") {
         owner = payable(msg.sender);
-        uint256 ceva = 3;
+        //uint256 ceva = 3;
         marketplaceReward = new NFTMarketplaceReward();
     }
 
@@ -56,11 +58,11 @@ contract NFTMarketplace is ERC721URIStorage {
         listPrice = _listPrice;
     }
 
-    function getListPrice() external returns (uint256) {
-        //marketplaceReward.increaseSellerNFTCount(msg.sender);
-        bool reward = true;//marketplaceReward.checkReward(msg.sender);
+    function getListPrice() external view returns (uint256) {
+        uint256 reward = marketplaceReward.checkReward(msg.sender);
+        reward = reward + 1;
         uint256 rewardPrice = 0.01 ether;
-        if (reward)
+        if (reward == 2)
         {
             return rewardPrice;
         } else
@@ -85,9 +87,10 @@ contract NFTMarketplace is ERC721URIStorage {
 
     function createToken(string memory tokenURI, uint256 price) public payable returns (uint) {
 
-        bool reward = marketplaceReward.checkReward(msg.sender);
+        marketplaceReward.increaseSellerNFTCount(msg.sender);
+        uint256 reward = marketplaceReward.checkReward(msg.sender);
 
-        if (!reward)
+        if (reward != 2)
         {
             require(msg.value == listPrice, "Hopefully sending the correct price");
         }
@@ -108,8 +111,6 @@ contract NFTMarketplace is ERC721URIStorage {
     }
 
     function createListedToken(uint256 tokenId, uint256 price) private {
-
-
 
         idToListedToken[tokenId] = ListedToken(
             tokenId,
@@ -180,13 +181,8 @@ contract NFTMarketplace is ERC721URIStorage {
         _transfer(address(this), msg.sender, tokenId);
         approve(address(this), tokenId);
 
-
-
         payable(owner).transfer(listPrice);
         payable(seller).transfer(msg.value);
-
-       
-
     }
 
     function addNumber(uint256 a, uint256 b) public pure returns (uint256) {
